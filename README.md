@@ -10,6 +10,26 @@ Crawls all **26 letter index pages** (A–Z), follows every remedy link, parses 
 
 No external scraping frameworks. Just `requests` + `BeautifulSoup` + some careful tree walking.
 
+```mermaid
+flowchart TD
+    START([start]) --> LOAD[load_existing<br/>boericke_remedies.json]
+    LOAD --> LETTER{for each letter<br/>A through Z}
+    LETTER --> FETCH[fetch_letter_index<br/>a.htm &rarr; z.htm]
+    FETCH --> PARSE[parse_remedy_links<br/>extract remedy URLs]
+    PARSE --> URL{for each URL}
+    URL -->|already scraped| SKIP[skip]
+    URL -->|new| SCRAPE[scrape_remedy_page<br/>requests + BeautifulSoup]
+    SCRAPE --> OK{success?}
+    OK -->|yes| APPEND[append to results]
+    OK -->|no| FAIL[log to<br/>failed_urls.txt]
+    APPEND --> SAVE[save_output<br/>write boericke_remedies.json]
+    SAVE --> SLEEP[sleep 0.5&ndash;1s]
+    SLEEP --> URL
+    SKIP --> URL
+    URL --> LETTER
+    LETTER --> DONE([done &check;])
+```
+
 ---
 
 ## Repo structure
@@ -147,6 +167,21 @@ pytest test_scraper.py -v -m integration
 ## How the parsing works
 
 The site is vintage 1990s HTML — no semantic tags, no CSS classes. Structure comes entirely from `<b>` tag patterns.
+
+```mermaid
+flowchart TD
+    HTML["Remedy page HTML"] --> HEADING["&lt;b&gt;ACONITUM NAPELLUS<br/>Monkshood&lt;/b&gt;"]
+    HTML --> PARAS["&lt;p&gt;General paragraphs...&lt;/p&gt;"]
+    HTML --> SECTIONS["&lt;b&gt;Head.--&lt;/b&gt; text<br/>&lt;b&gt;Stomach.--&lt;/b&gt; text<br/>&lt;b&gt;Dose.--&lt;/b&gt; text"]
+    HTML --> RELATION["&lt;b&gt;Relationship.--&lt;/b&gt;<br/>Complementary: ..."]
+
+    HEADING --> NAMES["full_name &larr; first line<br/>common_name &larr; second line"]
+    PARAS --> FIELD_GEN["general: opening paragraphs<br/>(before first section)"]
+    SECTIONS --> FIELD_SEC["sections: { Head: ...,<br/>Stomach: ..., Dose: ... }"]
+    RELATION --> FIELD_REL["relationships:<br/>Complementary: Coffea..."]
+    RELATION -.->|or embedded in<br/>last section| EMBED["_split_out_relationships()"]
+    EMBED --> FIELD_REL
+```
 
 **Name extraction**
 The remedy name and common name are packed into the same `<b>` tag, separated by a newline: `"ACONITUM NAPELLUS\nMonkshood"`. The parser splits on newlines, checks the first line for all-caps, and takes the second line as the common name.
