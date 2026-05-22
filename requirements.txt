@@ -1,0 +1,5 @@
+requests==2.31.0
+beautifulsoup4==4.12.3
+
+# Test dependencies
+pytest==8.2.0
