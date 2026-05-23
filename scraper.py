@@ -215,7 +215,7 @@ def _split_out_relationships(text: str) -> tuple[str, Optional[str]]:
     Returns:
         ``(original_text, None)`` when no keywords are found.
     """
-    m = _REL_KW_RE.search(text)
+    m = _REL_KW_RE.match(text)
     if m:
         return clean_text(text[: m.start()]), clean_text(text[m.start() :])
     return text, None
@@ -466,7 +466,7 @@ def scrape_remedy_page(
     for idx, (sec_name, sec_b) in enumerate(section_tags):
         next_b = section_tags[idx + 1][1] if idx + 1 < len(section_tags) else None
         raw_text = _collect_text_from_to(body, sec_b, next_b)
-        sec_text = _strip_footer(raw_text)
+        sec_text = raw_text
 
         low = sec_name.lower()
 
@@ -668,10 +668,10 @@ def main() -> None:
                     total,
                     link["abbreviation"],
                 )
+                time.sleep(random.uniform(*DELAY_RANGE))
                 continue
 
             remedy = scrape_remedy_page(url, letter, link["abbreviation"])
-            time.sleep(random.uniform(*DELAY_RANGE))
 
             if remedy:
                 all_remedies.append(remedy)
